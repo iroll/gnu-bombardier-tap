@@ -11,8 +11,7 @@ class GnuBombardier < Formula
     # Replace the Latin-2 hof.c with a clean UTF-8 version
     # Move HOF location to match macOS file convention
     rm "hof.c"
-    curl "-o", "hof.c", "https://raw.githubusercontent.com/iroll/gnu-bombardier-tap/main/files/hof.c"
-
+    system "curl", "-o", "hof.c", "https://raw.githubusercontent.com/iroll/homebrew-gnu-bombardier-tap/main/files/hof.c"
     # Build and install
     system "make"
     bin.install "bombardier" => "gnu-bombardier"

@@ -6,6 +6,27 @@
 #include "bombardier.h"
 #include "fdgetline.c"
 #include "date.h"
+#include <string.h>
+#include <unistd.h>
+
+
+# define MAX_NAME_DISPLAY 20 - switches byte counting in old versions to character counting
+
+void truncate_utf8(char *dst, const char *src, int max_chars) {
+    int i = 0, j = 0, chars = 0;
+    while (src[i] && chars < max_chars) {
+        unsigned char c = src[i];
+        int len = (c & 0x80) == 0 ? 1 :
+                  (c & 0xE0) == 0xC0 ? 2 :
+                  (c & 0xF0) == 0xE0 ? 3 : 4;
+        if (!src[i + len - 1]) break;
+        for (int k = 0; k < len; k++) dst[j++] = src[i++];
+        chars++;
+    }
+    // Pad with spaces if shorter than max_chars visually
+    while (chars++ < max_chars) dst[j++] = ' ';
+    dst[j] = '\0';
+}
 
 char * printhof(char names[9][21], char dates[9][11], int scores[9], unsigned char numoffame, unsigned char nowres, int score)
 {
@@ -16,20 +37,22 @@ char * printhof(char names[9][21], char dates[9][11], int scores[9], unsigned ch
     name=NULL;
     mvprintw(gy(0),gx(0),"Your score is: %7d\n", score);
     mvprintw(gy(5),gx(15),"/----------------- HALL OF FAME -------------------\\");
-    for (i=0;i<numoffame;i++)
-        mvprintw(gy(i+6),gx(15),"| %d. | %-20s | %10s | %7d |", i+1, names[i], dates[i], scores[i]);
-    mvprintw(gy(i+6),gx(15),"\\--------------------------------------------------/");
+    for (i=0;i<numoffame;i++) {
+        char namebuf[64];
+        truncate_utf8(namebuf, names[i], 20);
+        mvprintw(gy(i+6),gx(15),"| %d. | %-20s | %10s | %7d |", i+1, namebuf, dates[i], scores[i]);
+    }
     fillspace();
     if (nowres)
     {
-        name=malloc(21);
-        act=derwin(stdscr, 1, 20, gy(nowres+5), gx(22));
+        name=malloc(256);
+        act=derwin(stdscr, 1, 40, gy(nowres+5), gx(22));
         wclrtoeol(act);
         fillspace();
         refresh();
         echo();
         curs_set(1);
-        wgetnstr(act, name, 20);
+        wgetnstr(act, name, 255);
         curs_set(0);
         noecho();
         delwin(act);
@@ -39,22 +62,22 @@ char * printhof(char names[9][21], char dates[9][11], int scores[9], unsigned ch
     return name;
 }
 
-void defhof(int fd)
+    /* HOF initialized in UTF-8 instead of ISO-8859-2 */
 {
-    write(fd, "Teller Ede          |1908-01-15|  16384\n", 40);
-    write(fd, "Szilárd Leó         |1898-02-11|   8192\n", 40);
-    write(fd, "Neumann János       |1903-12-28|   4096\n", 40);
-    write(fd, "Gábor Dénes         |1900-06-05|   2048\n", 40);
-    write(fd, "Bolyai János        |1802-12-15|   1024\n", 40);
-    write(fd, "Eötvös Loránd       |1848-07-27|    512\n", 40);
-    write(fd, "Horthy Miklós       |1800-00-00|    256\n", 40);
-    write(fd, "Kádár János         |1800-00-00|    128\n", 40);
-    write(fd, "Rákosi Mátyás       |1892-00-00|     64\n", 40);
+    dprintf(fd, "Teller Ede          |1908-01-15|  16384\n");
+    dprintf(fd, "Szil\303\241rd Le\303\263         |1898-02-11|   8192\n");
+    dprintf(fd, "Neumann J\303\241nos       |1903-12-28|   4096\n");
+    dprintf(fd, "G\303\241bor D\303\251nes         |1900-06-05|   2048\n");
+    dprintf(fd, "Bolyai J\303\241nos        |1802-12-15|   1024\n");
+    dprintf(fd, "E\303\266tv\303\266s Lor\303\241nd       |1848-07-27|    512\n");
+    dprintf(fd, "Horthy Mikl\303\263s       |1800-00-00|    256\n");
+    dprintf(fd, "K\303\241d\303\241r J\303\241nos         |1800-00-00|    128\n");
+    dprintf(fd, "R\303\241kosi M\303\241ty\303\241s       |1892-00-00|     64\n");
 }
 
 void hof(struct struc_state *state)
 {
-    /* Make the HOF safe for macOS but default to Debian */
+    /* HOF defaults to Debian but safe for macOS file convention */
 #ifdef __APPLE__
     char path[4096];
     char dirpath[4096];

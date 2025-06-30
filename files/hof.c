@@ -63,6 +63,7 @@ char * printhof(char names[9][21], char dates[9][11], int scores[9], unsigned ch
 }
 
     /* HOF initialized in UTF-8 instead of ISO-8859-2 */
+void defhof(int fd)
 {
     dprintf(fd, "Teller Ede          |1908-01-15|  16384\n");
     dprintf(fd, "Szil\303\241rd Le\303\263         |1898-02-11|   8192\n");
